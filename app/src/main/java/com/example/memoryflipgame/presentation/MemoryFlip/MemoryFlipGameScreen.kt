@@ -41,16 +41,24 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.memoryflipgame.data.service.CommunicationManager
+import com.example.memoryflipgame.domain.model.GameEvent
+import com.example.memoryflipgame.domain.model.Player
+import com.example.memoryflipgame.domain.sendGameEnded
 import com.example.memoryflipgame.ui.theme.whiteColor
 import kotlinx.coroutines.delay
 import network.chaintech.sdpcomposemultiplatform.sdp
 import network.chaintech.sdpcomposemultiplatform.ssp
+import kotlin.math.absoluteValue
 
 @Composable
-fun MemoryFlipGameScreen() {
+fun MemoryFlipGameScreen(communicationManager: CommunicationManager) {
 
     val context = LocalContext.current
     val viewModel = remember { MemoryFlipGameViewModel(context) }
+
+    val gameHandler = remember { GameNetworkHandler(communicationManager) }
+    var lost = remember { mutableStateOf(false) }
 
 
     // Animation states for enhanced UI
@@ -71,9 +79,11 @@ fun MemoryFlipGameScreen() {
         screenVisible = true
     }
 
-    LaunchedEffect(viewModel.attempts, viewModel.matchedCard) {
+    LaunchedEffect(viewModel.attempts.absoluteValue, viewModel.matchedCard.value) {
         if (viewModel.attempts > viewModel.pairCount * 2 || viewModel.matchedCard.intValue == viewModel.pairCount) {
             viewModel.timeRemaining.intValue = 0
+            val player = Player(name = "Bhushan", id = "1")
+            sendGameEnded(player, "Bhushan Win", communicationManager)
         }
     }
 
@@ -86,6 +96,18 @@ fun MemoryFlipGameScreen() {
             Toast.makeText(context, "Time Out", Toast.LENGTH_SHORT).show()
         }
     }
+
+    gameHandler.onGameEvent = { event ->
+        when (event) {
+            is GameEvent.CardFlipped -> {}
+            is GameEvent.GameEnded -> {
+               lost.value = true
+            }
+            is GameEvent.GameStarted -> {}
+            is GameEvent.PlayerJoined -> {}
+        }
+    }
+
 
     Box(
         modifier = Modifier
@@ -238,7 +260,7 @@ fun MemoryFlipGameScreen() {
                             )
                             Spacer(modifier = Modifier.height(4.sdp))
                             Text(
-                                text = "${viewModel.attempts}/${viewModel.pairCount*2}",
+                                text = "${viewModel.attempts}/${viewModel.pairCount * 2}",
                                 style = MaterialTheme.typography.headlineSmall.copy(
                                     color = if (viewModel.attempts > 8) Color(0xFFFF6B6B) else Color.White,
                                     fontWeight = FontWeight.Bold,
@@ -558,7 +580,8 @@ fun MemoryFlipGameScreen() {
     )
 
     LoseDialog(
-        isVisible = (viewModel.isTimeOut.value || viewModel.attempts == viewModel.pairCount * 2),
+        isVisible = lost.value,
+//        isVisible = (viewModel.isTimeOut.value || viewModel.attempts == viewModel.pairCount * 2),
         onDismiss = {
             viewModel.isTimeOut.value = false
             viewModel.attempts = 0
@@ -579,8 +602,18 @@ fun formatTime(seconds: Int): String {
 }
 
 
+class GameNetworkHandler(private val communicationManager: CommunicationManager) {
+    var onGameEvent: ((GameEvent) -> Unit)? = null
+
+    init {
+        communicationManager.onMessageReceived = { event ->
+            onGameEvent?.invoke(event)
+        }
+    }
+}
+
 @Preview
 @Composable
 fun MemoryGame() {
-    MemoryFlipGameScreen()
+//    MemoryFlipGameScreen(communicationManager)
 }

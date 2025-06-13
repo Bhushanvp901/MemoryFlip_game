@@ -1,12 +1,12 @@
 package com.example.memoryflipgame.presentation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.memoryflipgame.data.ClientSocketManager
-import com.example.memoryflipgame.data.ServerSocketManager
+import com.example.memoryflipgame.data.service.CommunicationManager
 import com.example.memoryflipgame.presentation.Home.HomeScreen
 import com.example.memoryflipgame.presentation.MemoryFlip.MemoryFlipGameScreen
 import com.example.memoryflipgame.presentation.Multiplayer.ConnectSocketScreen
@@ -19,9 +19,8 @@ fun Navigation(){
     }
     val navController = rememberNavController()
     val context = LocalContext.current
-    val serverManager = ServerSocketManager(::handleMessage)
-    val clientManager = ClientSocketManager(::handleMessage)
 
+    val communicationManager  = remember { CommunicationManager() }
 
 
     NavHost(navController = navController, startDestination = "socket"){
@@ -33,12 +32,14 @@ fun Navigation(){
         }
 
         composable("game") {
-            MemoryFlipGameScreen()
+            MemoryFlipGameScreen(communicationManager)
         }
 
 
         composable("socket") {
-            ConnectSocketScreen(serverManager,clientManager)
+            ConnectSocketScreen(communicationManager){
+                navController.navigate(it)
+            }
         }
 
     }
