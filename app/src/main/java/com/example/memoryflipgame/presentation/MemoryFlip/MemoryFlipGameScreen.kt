@@ -27,14 +27,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import com.example.memoryflipgame.presentation.MemoryFlipGameViewModel
-import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.SegmentedButtonDefaults.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.CornerRadius
@@ -43,29 +39,32 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
+import com.example.memoryflipgame.ui.theme.whiteColor
 import kotlinx.coroutines.delay
 import network.chaintech.sdpcomposemultiplatform.sdp
 import network.chaintech.sdpcomposemultiplatform.ssp
 
 @Composable
-fun MemoryFlipGameScreen(viewModel: MemoryFlipGameViewModel) {
+fun MemoryFlipGameScreen() {
 
     val context = LocalContext.current
+    val viewModel = remember { MemoryFlipGameViewModel(context) }
+
 
     // Animation states for enhanced UI
     var screenVisible by remember { mutableStateOf(false) }
     val headerAlpha by animateFloatAsState(
         targetValue = if (screenVisible) 1f else 0f,
-        animationSpec = tween(800)
+        animationSpec = tween(800), label = ""
     )
     val cardsScale by animateFloatAsState(
         targetValue = if (screenVisible) 1f else 0.8f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
-        )
+        ), label = ""
     )
 
     LaunchedEffect(Unit) {
@@ -73,7 +72,7 @@ fun MemoryFlipGameScreen(viewModel: MemoryFlipGameViewModel) {
     }
 
     LaunchedEffect(viewModel.attempts, viewModel.matchedCard) {
-        if (viewModel.attempts > 12 || viewModel.matchedCard.intValue == 6) {
+        if (viewModel.attempts > viewModel.pairCount * 2 || viewModel.matchedCard.intValue == viewModel.pairCount) {
             viewModel.timeRemaining.intValue = 0
         }
     }
@@ -147,34 +146,44 @@ fun MemoryFlipGameScreen(viewModel: MemoryFlipGameViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Glowing title with shadow effect
-                Box(
-                    modifier = Modifier
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color(0xFF6366F1).copy(alpha = 0.2f),
-                                    Color(0xFF8B5CF6).copy(alpha = 0.2f),
-                                    Color(0xFFEC4899).copy(alpha = 0.2f)
-                                )
-                            ),
-                            shape = RoundedCornerShape(20.sdp)
-                        )
-                        .padding(horizontal = 24.sdp, vertical = 12.sdp)
-                ) {
-                    Text(
-                        text = "✨ Memory Match ✨",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            shadow = Shadow(
-                                color = Color(0xFF6366F1).copy(alpha = 0.5f),
-                                offset = Offset(0f, 4f),
-                                blurRadius = 8f
-                            )
-                        ),
-                        fontSize = 28.ssp
-                    )
-                }
+//                Box(
+//                    modifier = Modifier
+//                        .background(
+//                            brush = Brush.horizontalGradient(
+//                                colors = listOf(
+//                                    Color(0xFF6366F1).copy(alpha = 0.2f),
+//                                    Color(0xFF8B5CF6).copy(alpha = 0.2f),
+//                                    Color(0xFFEC4899).copy(alpha = 0.2f)
+//                                )
+//                            ),
+//                            shape = RoundedCornerShape(20.sdp)
+//                        )
+//                        .padding(horizontal = 24.sdp, vertical = 12.sdp)
+//                ) {
+//                    Text(
+//                        text = "✨ Memory Match ✨",
+//                        style = MaterialTheme.typography.headlineMedium.copy(
+//                            color = Color.White,
+//                            fontWeight = FontWeight.Bold,
+//                            shadow = Shadow(
+//                                color = Color(0xFF6366F1).copy(alpha = 0.5f),
+//                                offset = Offset(0f, 4f),
+//                                blurRadius = 8f
+//                            )
+//                        ),
+//                        fontSize = 28.ssp
+//                    )
+
+                Text(
+                    text = "✨Memory Match✨",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        color = whiteColor,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    fontSize = 28.ssp,
+                    modifier = Modifier.padding(bottom = 24.sdp)
+                )
+//                }
 
                 Spacer(modifier = Modifier.height(24.sdp))
 
@@ -229,7 +238,7 @@ fun MemoryFlipGameScreen(viewModel: MemoryFlipGameViewModel) {
                             )
                             Spacer(modifier = Modifier.height(4.sdp))
                             Text(
-                                text = "${viewModel.attempts}/12",
+                                text = "${viewModel.attempts}/${viewModel.pairCount*2}",
                                 style = MaterialTheme.typography.headlineSmall.copy(
                                     color = if (viewModel.attempts > 8) Color(0xFFFF6B6B) else Color.White,
                                     fontWeight = FontWeight.Bold,
@@ -263,8 +272,10 @@ fun MemoryFlipGameScreen(viewModel: MemoryFlipGameViewModel) {
                         modifier = Modifier
                             .weight(1f)
                             .graphicsLayer {
-                                scaleX = if (viewModel.timeRemaining.intValue <= 10) pulseScale else 1f
-                                scaleY = if (viewModel.timeRemaining.intValue <= 10) pulseScale else 1f
+                                scaleX =
+                                    if (viewModel.timeRemaining.intValue <= 10) pulseScale else 1f
+                                scaleY =
+                                    if (viewModel.timeRemaining.intValue <= 10) pulseScale else 1f
                             }
                             .drawBehind {
                                 drawRoundRect(
@@ -305,7 +316,7 @@ fun MemoryFlipGameScreen(viewModel: MemoryFlipGameViewModel) {
                             )
                             Spacer(modifier = Modifier.height(4.sdp))
                             Text(
-                                text = formatTime(viewModel.timeRemaining.value),
+                                text = formatTime(viewModel.timeRemaining.intValue),
                                 style = MaterialTheme.typography.headlineSmall.copy(
                                     color = timerColor,
                                     fontWeight = FontWeight.Bold,
@@ -324,38 +335,38 @@ fun MemoryFlipGameScreen(viewModel: MemoryFlipGameViewModel) {
                 Spacer(modifier = Modifier.height(16.sdp))
 
                 // Progress bar for matched cards
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.sdp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color.White.copy(alpha = 0.1f)
-                    ),
-                    shape = RoundedCornerShape(20.sdp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.sdp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Progress: ${viewModel.matchedCard.intValue}/6 pairs",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = Color.White.copy(alpha = 0.8f)
-                            ),
-                            fontSize = 10.ssp
-                        )
-                        Spacer(modifier = Modifier.height(6.sdp))
-                        LinearProgressIndicator(
-                            progress = viewModel.matchedCard.intValue / 6f,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.sdp)
-                                .clip(RoundedCornerShape(3.sdp)),
-                            color = Color(0xFF4ECDC4),
-                            trackColor = Color.White.copy(alpha = 0.2f)
-                        )
-                    }
-                }
+//                Card(
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .padding(horizontal = 24.sdp),
+//                    colors = CardDefaults.cardColors(
+//                        containerColor = Color.White.copy(alpha = 0.1f)
+//                    ),
+//                    shape = RoundedCornerShape(20.sdp)
+//                ) {
+//                    Column(
+//                        modifier = Modifier.padding(12.sdp),
+//                        horizontalAlignment = Alignment.CenterHorizontally
+//                    ) {
+//                        Text(
+//                            text = "Progress: ${viewModel.matchedCard.intValue}/6 pairs",
+//                            style = MaterialTheme.typography.bodySmall.copy(
+//                                color = Color.White.copy(alpha = 0.8f)
+//                            ),
+//                            fontSize = 10.ssp
+//                        )
+//                        Spacer(modifier = Modifier.height(6.sdp))
+//                        LinearProgressIndicator(
+//                            progress = viewModel.matchedCard.intValue / 6f,
+//                            modifier = Modifier
+//                                .fillMaxWidth()
+//                                .height(6.sdp)
+//                                .clip(RoundedCornerShape(3.sdp)),
+//                            color = Color(0xFF4ECDC4),
+//                            trackColor = Color.White.copy(alpha = 0.2f)
+//                        )
+//                    }
+//                }
             }
 
             // Enhanced Game Grid with better animations
@@ -370,173 +381,173 @@ fun MemoryFlipGameScreen(viewModel: MemoryFlipGameViewModel) {
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Card(
+//                Card(
+//                    modifier = Modifier
+//                        .fillMaxSize()
+//                        .padding(8.sdp),
+//                    colors = CardDefaults.cardColors(
+//                        containerColor = Color.White.copy(alpha = 0.05f)
+//                    ),
+//                    shape = RoundedCornerShape(20.sdp),
+//                    elevation = CardDefaults.cardElevation(defaultElevation = 12.sdp)
+//                ) {
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(8.sdp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color.White.copy(alpha = 0.05f)
-                    ),
-                    shape = RoundedCornerShape(20.sdp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 12.sdp)
+                        .padding(vertical = 12.sdp, horizontal = 5.sdp),
+                    verticalArrangement = Arrangement.spacedBy(8.sdp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(12.sdp),
-                        verticalArrangement = Arrangement.spacedBy(8.sdp)
-                    ) {
-                        repeat(5) { row ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f),
-                                horizontalArrangement = Arrangement.spacedBy(8.sdp)
-                            ) {
-                                repeat(4) { col ->
-                                    val cardIndex = row * 4 + col
-                                    if (cardIndex < viewModel.cards.size) {
-                                        val card = viewModel.cards[cardIndex]
+                    repeat(5) { row ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(8.sdp)
+                        ) {
+                            repeat(4) { col ->
+                                val cardIndex = row * 4 + col
+                                if (cardIndex < viewModel.cards.size) {
+                                    val card = viewModel.cards[cardIndex]
 
-                                        if (!card.isMatched) {
-                                            FlipCard(
-                                                cardFace = if (card.isFaceUp) CardFace.Front else CardFace.Back,
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .aspectRatio(1f),
-                                                back = {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .background(
-                                                                brush = Brush.radialGradient(
-                                                                    colors = listOf(
-                                                                        Color(0xFF6366F1),
-                                                                        Color(0xFF4338CA),
-                                                                        Color(0xFF3730A3)
-                                                                    )
-                                                                ),
-                                                                shape = RoundedCornerShape(12.sdp)
-                                                            )
-                                                            .border(
-                                                                2.sdp,
-                                                                brush = Brush.horizontalGradient(
-                                                                    colors = listOf(
-                                                                        Color.White.copy(alpha = 0.3f),
-                                                                        Color.Transparent
-                                                                    )
-                                                                ),
-                                                                RoundedCornerShape(12.sdp)
-                                                            ),
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Text(
-                                                            text = "❓",
-                                                            fontSize = 32.ssp,
-                                                            color = Color.White,
-                                                            fontWeight = FontWeight.Bold,
-                                                            style = TextStyle(
-                                                                shadow = Shadow(
-                                                                    color = Color.Black.copy(alpha = 0.5f),
-                                                                    offset = Offset(0f, 2f),
-                                                                    blurRadius = 4f
+                                    if (!card.isMatched) {
+                                        FlipCard(
+                                            cardFace = if (card.isFaceUp) CardFace.Front else CardFace.Back,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .aspectRatio(1f),
+                                            back = {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .background(
+                                                            brush = Brush.radialGradient(
+                                                                colors = listOf(
+                                                                    Color(0xFF6366F1),
+                                                                    Color(0xFF4338CA),
+                                                                    Color(0xFF3730A3)
                                                                 )
-                                                            )
-                                                        )
-                                                    }
-                                                },
-                                                front = {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .background(
-                                                                brush = Brush.verticalGradient(
-                                                                    colors = listOf(
-                                                                        Color.White,
-                                                                        Color(0xFFF8FAFC)
-                                                                    )
-                                                                ),
-                                                                shape = RoundedCornerShape(12.sdp)
-                                                            )
-                                                            .border(
-                                                                2.sdp,
-                                                                Color(0xFF4ECDC4).copy(alpha = 0.6f),
-                                                                RoundedCornerShape(12.sdp)
                                                             ),
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Text(
-                                                            text = card.image,
-                                                            fontSize = 28.ssp,
-                                                            style = TextStyle(
-                                                                shadow = Shadow(
-                                                                    color = Color.Gray.copy(alpha = 0.3f),
-                                                                    offset = Offset(0f, 1f),
-                                                                    blurRadius = 2f
-                                                                )
-                                                            )
+                                                            shape = RoundedCornerShape(8.sdp)
                                                         )
-                                                    }
-                                                },
-                                                onClick = {
-                                                    viewModel.onCardClicked(card)
-                                                }
-                                            )
-                                        } else {
-                                            // Enhanced matched card with celebration effect
-                                            val infiniteTransition = rememberInfiniteTransition()
-                                            val glowAlpha by infiniteTransition.animateFloat(
-                                                initialValue = 0.3f,
-                                                targetValue = 0.8f,
-                                                animationSpec = infiniteRepeatable(
-                                                    animation = tween(1000),
-                                                    repeatMode = RepeatMode.Reverse
-                                                )
-                                            )
-
-                                            Box(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .aspectRatio(1f)
-                                                    .background(
-                                                        brush = Brush.radialGradient(
-                                                            colors = listOf(
-                                                                Color(0xFF4ECDC4).copy(alpha = glowAlpha),
-                                                                Color(0xFF44A08D).copy(alpha = 0.3f)
-                                                            )
+                                                        .border(
+                                                            2.sdp,
+                                                            brush = Brush.horizontalGradient(
+                                                                colors = listOf(
+                                                                    Color.White.copy(alpha = 0.3f),
+                                                                    Color.Transparent
+                                                                )
+                                                            ),
+                                                            RoundedCornerShape(12.sdp)
                                                         ),
-                                                        shape = RoundedCornerShape(12.sdp)
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = "❓",
+                                                        fontSize = 32.ssp,
+                                                        color = Color.White,
+                                                        fontWeight = FontWeight.Bold,
+                                                        style = TextStyle(
+                                                            shadow = Shadow(
+                                                                color = Color.Black.copy(alpha = 0.5f),
+                                                                offset = Offset(0f, 2f),
+                                                                blurRadius = 4f
+                                                            )
+                                                        )
                                                     )
-                                                    .border(
-                                                        2.sdp,
-                                                        Color(0xFF4ECDC4),
-                                                        RoundedCornerShape(12.sdp)
-                                                    ),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                androidx.compose.material3.Icon(
-                                                    imageVector = Icons.Default.Check,
-                                                    contentDescription = "Matched",
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(24.sdp)
-                                                )
+                                                }
+                                            },
+                                            front = {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .background(
+                                                            brush = Brush.verticalGradient(
+                                                                colors = listOf(
+                                                                    Color.White,
+                                                                    Color(0xFFF8FAFC)
+                                                                )
+                                                            ),
+                                                            shape = RoundedCornerShape(8.sdp)
+                                                        )
+                                                        .border(
+                                                            2.sdp,
+                                                            Color(0xFF4ECDC4).copy(alpha = 0.6f),
+                                                            RoundedCornerShape(8.sdp)
+                                                        ),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = card.image,
+                                                        fontSize = 28.ssp,
+                                                        style = TextStyle(
+                                                            shadow = Shadow(
+                                                                color = Color.Gray.copy(alpha = 0.3f),
+                                                                offset = Offset(0f, 1f),
+                                                                blurRadius = 2f
+                                                            )
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            onClick = {
+                                                viewModel.onCardClicked(card)
                                             }
-                                        }
+                                        )
                                     } else {
-                                        Spacer(modifier = Modifier.weight(1f))
+                                        // Enhanced matched card with celebration effect
+                                        val infiniteTransition = rememberInfiniteTransition()
+                                        val glowAlpha by infiniteTransition.animateFloat(
+                                            initialValue = 0.3f,
+                                            targetValue = 0.8f,
+                                            animationSpec = infiniteRepeatable(
+                                                animation = tween(1000),
+                                                repeatMode = RepeatMode.Reverse
+                                            ), label = ""
+                                        )
+
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .aspectRatio(1f)
+                                                .background(
+                                                    brush = Brush.radialGradient(
+                                                        colors = listOf(
+                                                            Color(0xFF4ECDC4).copy(alpha = glowAlpha),
+                                                            Color(0xFF44A08D).copy(alpha = 0.3f)
+                                                        )
+                                                    ),
+                                                    shape = RoundedCornerShape(12.sdp)
+                                                )
+                                                .border(
+                                                    2.sdp,
+                                                    Color(0xFF4ECDC4),
+                                                    RoundedCornerShape(12.sdp)
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            androidx.compose.material3.Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Matched",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(24.sdp)
+                                            )
+                                        }
                                     }
+                                } else {
+                                    Spacer(modifier = Modifier.weight(1f))
                                 }
                             }
                         }
                     }
                 }
+
             }
         }
     }
 
     // Your existing dialogs
     WinDialog(
-        isVisible = (viewModel.matchedCard.intValue == 6),
+        isVisible = (viewModel.matchedCard.intValue == viewModel.pairCount),
         onDismiss = { viewModel.matchedCard.intValue = 0 },
         onPlayAgain = {
             viewModel.onRetry()
@@ -547,7 +558,7 @@ fun MemoryFlipGameScreen(viewModel: MemoryFlipGameViewModel) {
     )
 
     LoseDialog(
-        isVisible = (viewModel.isTimeOut.value || viewModel.attempts == 12),
+        isVisible = (viewModel.isTimeOut.value || viewModel.attempts == viewModel.pairCount * 2),
         onDismiss = {
             viewModel.isTimeOut.value = false
             viewModel.attempts = 0
@@ -565,4 +576,11 @@ fun formatTime(seconds: Int): String {
     val minutes = seconds / 60
     val remainingSeconds = seconds % 60
     return String.format("%02d:%02d", minutes, remainingSeconds)
+}
+
+
+@Preview
+@Composable
+fun MemoryGame() {
+    MemoryFlipGameScreen()
 }

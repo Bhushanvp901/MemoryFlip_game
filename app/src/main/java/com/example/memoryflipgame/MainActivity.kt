@@ -13,6 +13,9 @@ import com.example.memoryflipgame.presentation.Navigation
 import com.example.memoryflipgame.ui.theme.MemoryFlipGameTheme
 
 class MainActivity : ComponentActivity() {
+
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
