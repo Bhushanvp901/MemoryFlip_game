@@ -1,9 +1,8 @@
-package com.example.memoryflipgame.presentation.MemoryFlip
+package com.example.memoryflipgame.presentation.MemoryFlip.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import com.example.memoryflipgame.ui.theme.whiteColor
 
 @Composable
 fun FlipCard(
@@ -26,7 +24,7 @@ fun FlipCard(
     val rotation = animateFloatAsState(
         targetValue = cardFace.angle,
         animationSpec = tween(
-            durationMillis = 400,
+            durationMillis = 300,
             easing = FastOutSlowInEasing,
         ), label = ""
     )

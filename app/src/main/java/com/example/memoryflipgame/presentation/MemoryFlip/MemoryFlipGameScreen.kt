@@ -1,6 +1,7 @@
 package com.example.memoryflipgame.presentation.MemoryFlip
 
-import android.widget.Toast
+import android.content.Context
+import android.media.MediaPlayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -39,26 +40,51 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.memoryflipgame.R
 import com.example.memoryflipgame.data.service.CommunicationManager
+import com.example.memoryflipgame.domain.GameUIState
 import com.example.memoryflipgame.domain.model.GameEvent
-import com.example.memoryflipgame.domain.model.Player
-import com.example.memoryflipgame.domain.sendGameEnded
+import com.example.memoryflipgame.domain.model.MemoryCard
+import com.example.memoryflipgame.presentation.MemoryFlip.components.CardFace
+import com.example.memoryflipgame.presentation.MemoryFlip.components.FlipCard
+import com.example.memoryflipgame.presentation.MemoryFlip.components.LoseDialog
+import com.example.memoryflipgame.presentation.MemoryFlip.components.WinDialog
 import com.example.memoryflipgame.ui.theme.whiteColor
-import kotlinx.coroutines.delay
 import network.chaintech.sdpcomposemultiplatform.sdp
 import network.chaintech.sdpcomposemultiplatform.ssp
-import kotlin.math.absoluteValue
 
 @Composable
-fun MemoryFlipGameScreen(communicationManager: CommunicationManager) {
+fun MemoryFlipGameScreen2(
+    gameState: GameUIState,
+    onFlipCard: (MemoryCard) -> Unit,
+    onRetry: () -> Unit,
+    onDismissDialog: () -> Unit
+) {
+
+    var previousMatch by remember { mutableStateOf<Boolean?>(null) }
 
     val context = LocalContext.current
-    val viewModel = remember { MemoryFlipGameViewModel(context) }
 
-    val gameHandler = remember { GameNetworkHandler(communicationManager) }
-    var lost = remember { mutableStateOf(false) }
+    LaunchedEffect(gameState.flipCard, gameState.lastMatchSuccessful, gameState.isGameLoose) {
+        if (gameState.flipCard) {
+            playSound(context, R.raw.flipcard)
+        }
+
+        // Handle match result sound
+        gameState.lastMatchSuccessful?.let { isSuccessful ->
+            if (isSuccessful != previousMatch) {
+                previousMatch = isSuccessful
+                val soundId = if (isSuccessful) R.raw.correct else R.raw.error
+                playSound(context, soundId)
+            }
+        }
+
+        // Handle game lose sound
+        if (gameState.isGameLoose) {
+            playSound(context, R.raw.lost)
+        }
+    }
 
 
     // Animation states for enhanced UI
@@ -79,35 +105,6 @@ fun MemoryFlipGameScreen(communicationManager: CommunicationManager) {
         screenVisible = true
     }
 
-    LaunchedEffect(viewModel.attempts.absoluteValue, viewModel.matchedCard.value) {
-        if (viewModel.attempts > viewModel.pairCount * 2 || viewModel.matchedCard.intValue == viewModel.pairCount) {
-            viewModel.timeRemaining.intValue = 0
-            val player = Player(name = "Bhushan", id = "1")
-            sendGameEnded(player, "Bhushan Win", communicationManager)
-        }
-    }
-
-    LaunchedEffect(viewModel.timeRemaining.intValue, viewModel.isTimeRunning.value) {
-        if (viewModel.isTimeRunning.value && viewModel.timeRemaining.intValue > 0) {
-            delay(1000)
-            viewModel.timeRemaining.intValue--
-        } else if (viewModel.timeRemaining.intValue == 0) {
-            viewModel.isTimeOut.value = true
-            Toast.makeText(context, "Time Out", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    gameHandler.onGameEvent = { event ->
-        when (event) {
-            is GameEvent.CardFlipped -> {}
-            is GameEvent.GameEnded -> {
-               lost.value = true
-            }
-            is GameEvent.GameStarted -> {}
-            is GameEvent.PlayerJoined -> {}
-        }
-    }
-
 
     Box(
         modifier = Modifier
@@ -122,9 +119,8 @@ fun MemoryFlipGameScreen(communicationManager: CommunicationManager) {
                 )
             )
     ) {
-        // Animated background particles
-        repeat(15) { index ->
-            val infiniteTransition = rememberInfiniteTransition()
+        repeat(8) { index ->
+            val infiniteTransition = rememberInfiniteTransition(label = "")
             val offsetY by infiniteTransition.animateFloat(
                 initialValue = (-100).sdp.value,
                 targetValue = (LocalConfiguration.current.screenHeightDp + 100).toFloat(),
@@ -260,9 +256,9 @@ fun MemoryFlipGameScreen(communicationManager: CommunicationManager) {
                             )
                             Spacer(modifier = Modifier.height(4.sdp))
                             Text(
-                                text = "${viewModel.attempts}/${viewModel.pairCount * 2}",
+                                text = "${gameState.attempts}/${gameState.pairCount * 2}",
                                 style = MaterialTheme.typography.headlineSmall.copy(
-                                    color = if (viewModel.attempts > 8) Color(0xFFFF6B6B) else Color.White,
+                                    color = if (gameState.attempts > 8) Color(0xFFFF6B6B) else Color.White,
                                     fontWeight = FontWeight.Bold,
                                     shadow = Shadow(
                                         color = Color.Black.copy(alpha = 0.3f),
@@ -277,13 +273,13 @@ fun MemoryFlipGameScreen(communicationManager: CommunicationManager) {
 
                     // Timer with pulsing effect when low
                     val timerColor = when {
-                        viewModel.timeRemaining.intValue <= 10 -> Color(0xFFFF6B6B)
-                        viewModel.timeRemaining.intValue <= 30 -> Color(0xFFFFD93D)
+                        gameState.time <= 10 -> Color(0xFFFF6B6B)
+                        gameState.time <= 30 -> Color(0xFFFFD93D)
                         else -> Color.White
                     }
 
                     val pulseScale by animateFloatAsState(
-                        targetValue = if (viewModel.timeRemaining.intValue <= 10) 1.1f else 1f,
+                        targetValue = if (gameState.time <= 10) 1.1f else 1f,
                         animationSpec = infiniteRepeatable(
                             animation = tween(500),
                             repeatMode = RepeatMode.Reverse
@@ -295,9 +291,9 @@ fun MemoryFlipGameScreen(communicationManager: CommunicationManager) {
                             .weight(1f)
                             .graphicsLayer {
                                 scaleX =
-                                    if (viewModel.timeRemaining.intValue <= 10) pulseScale else 1f
+                                    if (gameState.time <= 10) pulseScale else 1f
                                 scaleY =
-                                    if (viewModel.timeRemaining.intValue <= 10) pulseScale else 1f
+                                    if (gameState.time <= 10) pulseScale else 1f
                             }
                             .drawBehind {
                                 drawRoundRect(
@@ -338,7 +334,7 @@ fun MemoryFlipGameScreen(communicationManager: CommunicationManager) {
                             )
                             Spacer(modifier = Modifier.height(4.sdp))
                             Text(
-                                text = formatTime(viewModel.timeRemaining.intValue),
+                                text = formatTime(gameState.time),
                                 style = MaterialTheme.typography.headlineSmall.copy(
                                     color = timerColor,
                                     fontWeight = FontWeight.Bold,
@@ -428,8 +424,8 @@ fun MemoryFlipGameScreen(communicationManager: CommunicationManager) {
                         ) {
                             repeat(4) { col ->
                                 val cardIndex = row * 4 + col
-                                if (cardIndex < viewModel.cards.size) {
-                                    val card = viewModel.cards[cardIndex]
+                                if (cardIndex < gameState.cards.size) {
+                                    val card = gameState.cards[cardIndex]
 
                                     if (!card.isMatched) {
                                         FlipCard(
@@ -512,7 +508,7 @@ fun MemoryFlipGameScreen(communicationManager: CommunicationManager) {
                                                 }
                                             },
                                             onClick = {
-                                                viewModel.onCardClicked(card)
+                                                onFlipCard(card)
                                             }
                                         )
                                     } else {
@@ -567,30 +563,21 @@ fun MemoryFlipGameScreen(communicationManager: CommunicationManager) {
         }
     }
 
-    // Your existing dialogs
     WinDialog(
-        isVisible = (viewModel.matchedCard.intValue == viewModel.pairCount),
-        onDismiss = { viewModel.matchedCard.intValue = 0 },
-        onPlayAgain = {
-            viewModel.onRetry()
-        },
-        attempts = viewModel.attempts,
-        timeElapsed = formatTime(viewModel.timeTaken),
-        score = calculateScore(viewModel.attempts, viewModel.timeRemaining.intValue)
+        isVisible = gameState.isGameWon,
+        onDismiss = onDismissDialog,
+        onPlayAgain = onRetry,
+        attempts = gameState.attempts,
+        timeElapsed = formatTime(gameState.time),
+        score = gameState.currentScore
     )
 
     LoseDialog(
-        isVisible = lost.value,
-//        isVisible = (viewModel.isTimeOut.value || viewModel.attempts == viewModel.pairCount * 2),
-        onDismiss = {
-            viewModel.isTimeOut.value = false
-            viewModel.attempts = 0
-        },
-        onTryAgain = {
-            viewModel.onRetry()
-        },
-        attempts = viewModel.attempts,
-        reason = if (viewModel.isTimeOut.value) "Time's up! Retry again" else "Attempts exceeds!!"
+        isVisible = gameState.isGameLoose,
+        onDismiss = onDismissDialog,
+        onTryAgain = onRetry,
+        attempts = gameState.attempts,
+        reason = ""
     )
 }
 
@@ -612,8 +599,22 @@ class GameNetworkHandler(private val communicationManager: CommunicationManager)
     }
 }
 
-@Preview
-@Composable
-fun MemoryGame() {
-//    MemoryFlipGameScreen(communicationManager)
+
+private fun playSound(context: Context, soundResId: Int) {
+    try {
+        val mediaPlayer = MediaPlayer.create(context, soundResId)
+        mediaPlayer?.let { player ->
+            player.setOnCompletionListener {
+                it.release()
+            }
+            player.setOnErrorListener { mp, _, _ ->
+                mp.release()
+                true
+            }
+            player.start()
+        }
+    } catch (e: Exception) {
+        println("sound exception $e")
+        // Handle exception silently
+    }
 }

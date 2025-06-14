@@ -1,4 +1,4 @@
-package com.example.memoryflipgame.presentation.MemoryFlip
+package com.example.memoryflipgame.presentation.MemoryFlip.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
