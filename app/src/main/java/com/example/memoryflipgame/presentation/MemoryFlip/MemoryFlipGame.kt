@@ -64,13 +64,17 @@ import network.chaintech.sdpcomposemultiplatform.ssp
 fun MemoryFlipGameScreen(
     gameState: GameUIState,
     onFlipCard: (MemoryCard) -> Unit,
+    onStartGame:()->Unit,
     onRetry: () -> Unit,
     onDismissDialog: () -> Unit
 ) {
     var previousMatch by remember { mutableStateOf<Boolean?>(null) }
     val context = LocalContext.current
 
-    // Simplified sound handling
+    LaunchedEffect (Unit){
+        onStartGame()
+    }
+
     LaunchedEffect(gameState.lastMatchSuccessful, gameState.isGameLoose) {
         try {
             if (gameState.lastMatchSuccessful == true) {

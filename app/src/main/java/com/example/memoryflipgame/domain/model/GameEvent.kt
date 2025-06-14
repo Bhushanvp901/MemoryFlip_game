@@ -21,21 +21,17 @@ sealed class GameEvent {
     ) : GameEvent()
 
     @Serializable
-    @SerialName("card_flipped")
-    data class CardFlipped(
-        val playerId: String,
-        val cardIndex: Int,
-        val cardValue: String,
-        val timestamp: Long = System.currentTimeMillis()
-    ) : GameEvent()
-
-    @Serializable
     @SerialName("game_ended")
     data class GameEnded(
         val winner: Player?,
-//        val finalScores: List<Player>,
+        val finalScores: List<Player>,
         val reason: String = "Game completed"
     ) : GameEvent()
+
+    @Serializable
+    @SerialName("player")
+    data class PlayerWon(val player: String, val score: Int) : GameEvent()
+
 }
 
 @Serializable

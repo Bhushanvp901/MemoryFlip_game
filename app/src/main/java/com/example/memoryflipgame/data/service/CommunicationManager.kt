@@ -32,12 +32,12 @@ class CommunicationManager{
     private var job: Job? = null
     val isConnected = AtomicBoolean(false)
 
-    val json = Json {
+    private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
         serializersModule = SerializersModule {
             polymorphic(GameEvent::class) {
-                subclass(GameEvent.CardFlipped::class)
+                subclass(GameEvent.GameEnded::class)
             }
         }
     }

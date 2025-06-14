@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.memoryflipgame.data.service.CommunicationManager
+import com.example.memoryflipgame.domain.model.GameEvent
 import com.example.memoryflipgame.presentation.Home.HomeScreen
 import com.example.memoryflipgame.presentation.MemoryFlip.MemoryFlipGameScreen
 import com.example.memoryflipgame.presentation.MemoryFlip.MemoryFlipGameViewModel
@@ -23,13 +24,14 @@ fun Navigation() {
 
     val navController = rememberNavController()
     val context = LocalContext.current
-    val viewModel = remember { MemoryFlipGameViewModel() }
-    val gameState by viewModel.uiState.collectAsState()
-
     val communicationManager = remember { CommunicationManager() }
 
+    val viewModel = remember { MemoryFlipGameViewModel(communicationManager) }
+    val gameState by viewModel.uiState.collectAsState()
 
-    NavHost(navController = navController, startDestination = "game") {
+
+
+    NavHost(navController = navController, startDestination = "socket") {
 
         composable("home") {
             HomeScreen() {
@@ -42,6 +44,7 @@ fun Navigation() {
                 gameState = gameState,
                 onRetry = { viewModel.onRetry() },
                 onFlipCard = { viewModel.onCardClicked(it) },
+                onStartGame = {viewModel.startMindFLipGame()},
                 onDismissDialog = { viewModel.onDismissDialog() }
             )
         }
@@ -56,3 +59,5 @@ fun Navigation() {
     }
 
 }
+
+
